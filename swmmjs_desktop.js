@@ -12,13 +12,6 @@
 // swmm-js model.
 /////////////////////////////////
 
-// model: a jSON model of a swmm-js object.
-// conduitName: a string representation of the conduit name.
-// Length: a number value for the conduit length.
-function updateConduitLength(model, conduitName, Length){
-  model.CONDUITS[conduitName].Length = Length
-}
-
 ///////////////////////////////////
 // String to JSON
 //
@@ -91,14 +84,14 @@ function parseInput(text) {
       if (m && m.length){
         switch(m[0]){
           case 'TIMESERIES':
-            model.TEMPERATURE.TIMESERIES = m[1].trim();
-            break;
+            model.TEMPERATURE.TIMESERIES = m[1].trim()
+            break
           case 'FILE':
             model.TEMPERATURE.FILE = {}
-            model.TEMPERATURE.FILE.Fname = m[1].trim();
-            if(m[2]) model.TEMPERATURE.FILE.Start = m[2].trim();
-            else model.TEMPERATURE.FILE.Start = null;
-            break;
+            model.TEMPERATURE.FILE.Fname = m[1].trim()
+            if(m[2]) model.TEMPERATURE.FILE.Start = m[2].trim()
+            else model.TEMPERATURE.FILE.Start = null
+            break
           case 'WINDSPEED':
             switch(m[1].trim()){
               case 'MONTHLY':
@@ -1243,17 +1236,96 @@ function parseInput(text) {
         section[Object.keys(model[section]).length] = {Value: m.join(' ')};
     },
 
-    //!!
+    //==
     LID_CONTROLS: function(model, section, m) {
-      if (m && m.length > 1)
-        model[section][Object.keys(model[section]).length] = {Value: m.join(' ')};
+      if (m && m.length){
+        // If there is not a LID_CONTROLS object, make one.
+        if(!isValidData(model[section][m[0]])){
+          model[section][m[0]] = { Type: m[1] }
+          return
+        }
+        var obj = model[section][m[0]]
+        switch(m[1]){
+          case('SURFACE'):
+            obj.SURFACE = {
+              StorHt: m[2],
+              VegFrac: m[3],
+              Rough: m[4],
+              Slope: m[5],
+              Xslope: m[6]?m[6]:0
+            }
+            break
+          case('SOIL'):
+            obj.SOIL = {
+              Thick: m[2],
+              Por: m[3],
+              FC: m[4],
+              WP: m[5],
+              Ksat: m[6],
+              Kcoeff: m[7],
+              Suct: m[8]
+            }
+            break
+            case('PAVEMENT'):
+            obj.PAVEMENT = {
+              Thick: m[2],
+              Vratio: m[3],
+              FracImp: m[4],
+              Perm: m[5],
+              Vclog: m[6]
+            }
+            break
+            case('STORAGE'):
+            obj.STORAGE = {
+              Height: m[2],
+              Vratio: m[3],
+              Seepage: m[4],
+              Vclog: m[5]
+            }
+            break
+            case('DRAIN'):
+            obj.DRAIN = {
+              Coeff: m[2],
+              Expon: m[3],
+              Offset: m[4],
+              Delay: m[5],
+              Open: m[6]?parseFloat(m[6]):0,
+              Close: m[7]?parseFloat(m[7]):0,
+              Curve: m[8]?m[8]:''
+            }
+            break
+            case('DRAINMAT'):
+            obj.DRAINMAT ={
+              Thick: m[2],
+              Vratio: m[3],
+              Rough: m[4]
+            }
+            break
+        }
+      }
     }, 
 
-    //!!
+    //==
     LID_USAGE: function(model, section, m) {
-      if (m && m.length > 1)
-        model[section][Object.keys(model[section]).length] = {Value: m.join(' ')};
-    }, 
+      if (m && m.length){
+        // If there is not a LID_USAGE object, make one.
+        if(!isValidData(model[section][m[0]])){
+          model[section][m[0]] = {}
+        }
+        var obj = model[section][m[0]]
+        obj[m[1]] = {
+          Number: parseFloat(m[2]),
+          Area: parseFloat(m[3]),
+          Width: parseFloat(m[4]),
+          InitSat: parseFloat(m[5]),
+          FromImp: parseFloat(m[6]),
+          ToPerv: parseFloat(m[7]),
+          RptFile: m[8]?m[8]:'*',
+          DrainTo: m[9]?m[9]:'',
+          FromPerv: m[10]?parseFloat(m[10]):0
+        }
+      }
+    },
 
     //!!
     EVENT: function(model, section, m) {
@@ -2024,7 +2096,6 @@ function dataToInpString(model){
         inpString += '\n'
 
         inpString += strsPad('GR', 4)
-        console.log(rec.GR)
         for(let el in rec.GR){
           inpString += numsPad(rec.GR[el].Elev, 18)
           inpString += numsPad(rec.GR[el].Station, 18)
@@ -2428,7 +2499,6 @@ function dataToInpString(model){
       return inpString;
     },
 
-    
     MAP: function(model) {
       let secStr = 'MAP'
       let inpString = sectionCap(secStr)
@@ -2508,16 +2578,16 @@ function dataToInpString(model){
         inpString += numsPad(rec.y, 10)
         inpString += strsPad(rec.Label, 16)
         inpString += strsPad(rec.Attrs, 16)
-        inpString += '\n';
+        inpString += '\n'
       }
-      return inpString;
+      return inpString
     },
 
     BACKDROP: function(model) {
-      if (!isValidData(model['BACKDROP'].File)){ return }
-      
       let secStr = 'BACKDROP'
       let inpString = sectionCap(secStr)
+
+      if (!isValidData(model['BACKDROP'].File)){ return inpString}
       var rec = model[secStr]
         
       inpString += strsPad('FILE', 6)
@@ -2531,20 +2601,121 @@ function dataToInpString(model){
       inpString += numsPad(rec.y2, 10)
       inpString += '\n';
 
-      return inpString;
+      return inpString
     },
 
     TAGS: function(model) {
-      let secStr = 'TAGS';
+      let secStr = 'TAGS'
       let inpString = sectionCap(secStr)
       for (let entry in model[secStr]) {
         var rec = model[secStr][entry]
         inpString += strsPad(rec.Type, 16)
         inpString += strsPad(rec.ID, 16)
         inpString += strsPad(rec.Tag, 16)
-        inpString += '\n';
+        inpString += '\n'
+      }
+      return inpString
+    },
+
+    LID_CONTROLS: function(model) {
+      let secStr = 'LID_CONTROLS'
+      let inpString = sectionCap(secStr)
+      for (let entry in model[secStr]) {
+        var rec = model[secStr][entry]
+        inpString += strsPad(entry, 16)
+        inpString += strsPad(rec.Type, 3)
+        inpString += '\n'
+        if(isValidData(rec.SURFACE)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('SURFACE', 10)
+          inpString += numsPad(rec.SURFACE.StorHt, 10)
+          inpString += numsPad(rec.SURFACE.VegFrac, 10)
+          inpString += numsPad(rec.SURFACE.Rough, 10)
+          inpString += numsPad(rec.SURFACE.Slope, 10)
+          inpString += numsPad(rec.SURFACE.Xslope, 10)
+          inpString += '\n'
+        }
+        if(isValidData(rec.SOIL)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('SOIL', 10)
+          inpString += numsPad(rec.SOIL.Thick, 10)
+          inpString += numsPad(rec.SOIL.Por, 10)
+          inpString += numsPad(rec.SOIL.FC, 10)
+          inpString += numsPad(rec.SOIL.WP, 10)
+          inpString += numsPad(rec.SOIL.Ksat, 10)
+          inpString += numsPad(rec.SOIL.Kcoeff, 10)
+          inpString += numsPad(rec.SOIL.Suct, 10)
+          inpString += '\n'
+        }
+        if(isValidData(rec.PAVEMENT)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('PAVEMENT', 10)
+          inpString += numsPad(rec.PAVEMENT.Thick, 10)
+          inpString += numsPad(rec.PAVEMENT.Vratio, 10)
+          inpString += numsPad(rec.PAVEMENT.FracImp, 10)
+          inpString += numsPad(rec.PAVEMENT.Perm, 10)
+          inpString += numsPad(rec.PAVEMENT.Vclog, 10)
+          inpString += '\n'
+        }
+        if(isValidData(rec.STORAGE)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('STORAGE', 10)
+          inpString += numsPad(rec.STORAGE.Height, 10)
+          inpString += numsPad(rec.STORAGE.Vratio, 10)
+          inpString += numsPad(rec.STORAGE.Seepage, 10)
+          inpString += numsPad(rec.STORAGE.Vclog, 10)
+          inpString += '\n'
+        }
+        if(isValidData(rec.DRAIN)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('DRAIN', 10)
+          inpString += numsPad(rec.DRAIN.Coeff, 10)
+          inpString += numsPad(rec.DRAIN.Expon, 10)
+          inpString += numsPad(rec.DRAIN.Offset, 10)
+          inpString += numsPad(rec.DRAIN.Delay, 10)
+          inpString += numsPad(rec.DRAIN.Open, 10)
+          inpString += numsPad(rec.DRAIN.Close, 10)
+          inpString += strsPad(rec.DRAIN.Curve, 16)
+          inpString += '\n'
+        }
+        if(isValidData(rec.DRAINMAT)){
+          inpString += strsPad(entry, 16)
+          inpString += strsPad('DRAINMAT', 10)
+          inpString += numsPad(rec.DRAINMAT.Thick, 10)
+          inpString += numsPad(rec.DRAINMAT.Vratio, 10)
+          inpString += numsPad(rec.DRAINMAT.Rough, 10)
+          inpString += '\n'
+        }
       }
       return inpString;
+    },
+
+    LID_USAGE: function(model) {
+      let secStr = 'LID_USAGE'
+      let inpString = sectionCap(secStr)
+      for (let entry in model[secStr]) {
+        var rec = model[secStr][entry]
+        for (let entry2 in rec){
+          let rec2 = rec[entry2]
+          inpString += strsPad(entry, 16)
+          inpString += strsPad(entry2, 16)
+          inpString += numsPad(rec2.Number, 7)
+          inpString += numsPad(rec2.Area, 10)
+          inpString += numsPad(rec2.Width, 10)
+          inpString += numsPad(rec2.InitSat, 10)
+          inpString += numsPad(rec2.FromImp, 10)
+          inpString += numsPad(rec2.ToPerv, 10)
+          if(isValidData(rec2.RptFile))
+            inpString += strsPad(rec2.RptFile, 24)
+          if(isValidData(rec2.DrainTo))
+            inpString += strsPad(rec2.DrainTo, 16)
+          if(isValidData(rec2.FromPerv))
+            inpString += numsPad(rec2.FromPerv, 10)
+          
+          inpString += '\n'
+        }
+      }
+      return inpString
     },
   }
 
@@ -2581,6 +2752,10 @@ function dataToInpString(model){
   function sectionCap(section){
     var thisStr = ''
     if(isValidData(section)){
+      if(section == 'LID_USAGE')
+        thisStr += '[LID_USAGE]\n;;Subcatchment   LID Process      Number  Area       Width      InitSat    FromImp    ToPerv     RptFile                  DrainTo          FromPerv  \n'
+      if(section == 'LID_CONTROLS')
+        thisStr += '[LID_CONTROLS]\n;;Name           Type/Layer Parameters\n'
       if(section == 'TAGS')
         thisStr += '[TAGS]\n'
       if(section == 'BACKDROP')
@@ -2732,7 +2907,7 @@ function dataToInpString(model){
                         'CONTROLS',       'REPORT',       'MAP',
                         'COORDINATES',    'VERTICES',     'Polygons', 
                         'SYMBOLS',        'LABELS',       'BACKDROP',
-                        'TAGS'
+                        'TAGS',           'LID_CONTROLS', 'LID_USAGE'
                       ]
 
   // There should also be an array sorted in the order of the
@@ -3231,6 +3406,19 @@ function intArrayToString(array) {
   return ret.join('');
 }
 
+
+
+////////////////////////////////////////////////////////////
+// Mapping assist functions
+////////////////////////////////////////////////////////////
+
+// Finding the centroid of the first section of a line
+// arr: [[x,y],[x,y]]
+function segmentCentroid(arr){
+  let newArr = [(arr[1][0]-arr[0][0])/2+arr[0][0], (arr[1][1]-arr[0][1])/2+arr[0][1]]
+  return newArr
+}
+
 // Translate a model's subcatchments into an array of polygons:
 function jsonArray_Subcatchments(model){
   var polyArray = []
@@ -3327,14 +3515,14 @@ function traceConduitLinks(model){
   return trace
 }
 
-function traceOrificeLinks(model){
+function traceSpecialLinks(model, section){
   var links = getAllLinks(model)
   var trace = []
   // Make sure the link is in the model
   
   for(let entry in links){
     rec = links[entry]
-    if(links[entry].linkType === 'ORIFICES'){
+    if(links[entry].linkType === section){
       if(!trace.includes(entry)){
         trace.push(entry)
       }
@@ -3357,6 +3545,77 @@ function traceAllLinks(model){
   }
 
   return trace
+}
+
+// Translate an array of point coordsinates into geoJSON objects:
+function geoJSON_AnyCoords(coordArray){
+  var geoJ = {
+    type : "FeatureCollection",
+    features : []
+  }
+
+  // Add each point to the features array in the geoJ object.
+  for(let entry in coordArray){
+    var rec = coordArray[entry]
+    polyObj = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [rec[0], rec[1]]
+      },
+      properties: {
+      }
+    }
+
+    geoJ.features.push(polyObj)
+  }
+
+  return geoJ
+}
+
+// Translate any list of link ids into geoJSON objects:
+function geoJSON_LinkStarts(model, linkList){
+  var allLinks = getAllLinks(model)
+  var geoJ = {
+    type : "FeatureCollection",
+    features : []
+  }
+
+  // Add each line to the features array in the geoJ object.
+  // Use conduits
+  for(let entry in linkList){
+    var linkPoints = []
+    var rec = allLinks[linkList[entry]]
+    polyObj = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: []
+      },
+      properties: {
+        name: linkList[entry]
+      }
+    }
+    
+    // Insert the 'inlet' node position
+    linkPoints.push([model['COORDINATES'][rec.Node1].x, model['COORDINATES'][rec.Node1].y])
+
+    // Add any intermediate vertices
+    for(let vertArray in model.VERTICES){
+      if(vertArray == linkList[entry]){
+        for(let vert in model.VERTICES[vertArray]){
+          linkPoints.push([model['VERTICES'][vertArray][vert].x, model['VERTICES'][vertArray][vert].y])
+        }
+      }
+    }
+    
+    // Insert the 'outlet' node position
+    linkPoints.push([model['COORDINATES'][rec.Node2].x, model['COORDINATES'][rec.Node2].y])
+
+    polyObj.geometry.coordinates = segmentCentroid([linkPoints[0], linkPoints[1]])
+    geoJ.features.push(polyObj)
+  }
+  return geoJ
 }
 
 // Translate any list of link ids into geoJSON objects:
@@ -3382,7 +3641,7 @@ function geoJSON_AnyLinks(model, linkList){
       }
     }
     
-    // Insert the in node position
+    // Insert the 'inlet' node position
     polyObj.geometry.coordinates.push([model['COORDINATES'][rec.Node1].x, model['COORDINATES'][rec.Node1].y])
 
     // Add any intermediate vertices
@@ -3394,7 +3653,7 @@ function geoJSON_AnyLinks(model, linkList){
       }
     }
     
-    // Insert the out node position
+    // Insert the 'outlet' node position
     polyObj.geometry.coordinates.push([model['COORDINATES'][rec.Node2].x, model['COORDINATES'][rec.Node2].y])
 
     geoJ.features.push(polyObj)
