@@ -1,0 +1,11 @@
+{
+  "name": "@swmm-js/swmmjs_desktop",
+  "version": "1.0.8",
+  "description": "Basic tools for working with swmm javascript objects",
+  "main": "swmmjs_desktop.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Issac Gardner, Bogdan Vaduva",
+  "license": "MIT"
+}
