@@ -3406,8 +3406,6 @@ function intArrayToString(array) {
   return ret.join('');
 }
 
-
-
 ////////////////////////////////////////////////////////////
 // Mapping assist functions
 ////////////////////////////////////////////////////////////
@@ -3523,6 +3521,23 @@ function traceSpecialLinks(model, section){
   for(let entry in links){
     rec = links[entry]
     if(links[entry].linkType === section){
+      if(!trace.includes(entry)){
+        trace.push(entry)
+      }
+    }
+  }
+
+  return trace
+}
+
+function traceSpecialNodes(model, section){
+  var nodes = getAllNodes(model)
+  var trace = []
+  // Make sure the node is in the model
+  
+  for(let entry in nodes){
+    rec = nodes[entry]
+    if(nodes[entry].nodeType === section){
       if(!trace.includes(entry)){
         trace.push(entry)
       }
@@ -3662,6 +3677,35 @@ function geoJSON_AnyLinks(model, linkList){
   return geoJ
 }
 
+// Translate any list of node ids into geoJSON objects:
+function geoJSON_AnyNodes(model, nodeList){
+  var allNodes = getAllNodes(model)
+  var geoJ = {
+    type : "FeatureCollection",
+    features : []
+  }
+
+  // Add each line to the features array in the geoJ object.
+  // Use conduits
+  for(let entry in nodeList){
+    var rec = allNodes[nodeList[entry]]
+    polyObj = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [rec.x, rec.y]
+      },
+      properties: {
+        name: nodeList[entry]
+      }
+    }
+    
+    geoJ.features.push(polyObj)
+  }
+
+  return geoJ
+}
+
 // getAllLinks packs all of the link data into 
 // an array of data structures like the following:
 // {
@@ -3687,6 +3731,43 @@ function getAllLinks(model){
         Node1: rec.Node1,
         Node2: rec.Node2,
         linkType: linksTypes[linkType]
+      }
+    }
+  }
+
+  return features
+}
+
+// getAllNodes packs all of the node data into 
+// an array of data structures like the following:
+// {
+//   id: 'id',
+//   x: xPosition,
+//   y: yPosition,
+//   nodeType: 'JUNCTIONS/OUTFALLS/DIVIDERS/STORAGE'
+// }
+// 
+// This makes operations like tracing, translating and displaying easier.
+function getAllNodes(model){
+  var features = {}
+  var nodesTypes = ['JUNCTIONS', 'OUTFALLS', 'DIVIDERS', 'STORAGE']
+
+  // Combine the links together
+  for(let nodeType in nodesTypes){
+    // Add all orifices to the links array.
+    for(let entry in model[nodesTypes[nodeType]]){
+      var rec = model[nodesTypes[nodeType]][entry]
+      
+      // Insert the link
+      features[entry] = {
+        nodeType: nodesTypes[nodeType]
+      }
+    }
+    for(let entry in model.COORDINATES){
+      if(features[entry]){
+        var rec = model.COORDINATES[entry]
+        features[entry].x = rec.x
+        features[entry].y = rec.y
       }
     }
   }
