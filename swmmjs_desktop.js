@@ -12,6 +12,11 @@
 // swmm-js model.
 /////////////////////////////////
 
+// Remove quotes from around strings.
+function removeQuotes(text){
+  return text.replace(/^"(.*)"$/, '$1')
+}
+
 ///////////////////////////////////
 // String to JSON
 //
@@ -1190,7 +1195,7 @@ function parseInput(text) {
         model[section].push({
           x: parseFloat(m[0]), 
           y: parseFloat(m[1]), 
-          Label: m[2],
+          Label: removeQuotes(m[2]),
           Attrs: m.slice(3).join(' ')
         })
       }
@@ -3686,7 +3691,7 @@ function geoJSON_AnyNodes(model, nodeList){
   }
 
   // Add each line to the features array in the geoJ object.
-  // Use conduits
+  // Use nodes
   for(let entry in nodeList){
     var rec = allNodes[nodeList[entry]]
     polyObj = {
@@ -3702,6 +3707,37 @@ function geoJSON_AnyNodes(model, nodeList){
     
     geoJ.features.push(polyObj)
   }
+
+  return geoJ
+}
+
+// Translate any list of node ids into geoJSON objects:
+function geoJSON_AllLabels(model){
+  var allLabels = model.LABELS
+  var geoJ = {
+    type : "FeatureCollection",
+    features : []
+  }
+
+  // Add each line to the features array in the geoJ object.
+  // Use conduits
+  for(let entry in allLabels){
+    var rec = allLabels[entry]
+    polyObj = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [rec.x, rec.y]
+      },
+      properties: {
+        name: entry,
+        text: rec.Label
+      }
+    }
+    
+    geoJ.features.push(polyObj)
+  }
+  console.log(geoJ)
 
   return geoJ
 }
