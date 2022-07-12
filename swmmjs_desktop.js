@@ -3711,6 +3711,37 @@ function geoJSON_AnyNodes(model, nodeList){
   return geoJ
 }
 
+// Translate all symbols into geoJSON objects:
+function geoJSON_AllSymbols(model){
+  var allSymbols = model.SYMBOLS
+  var geoJ = {
+    type : "FeatureCollection",
+    features : []
+  }
+
+  // Add each line to the features array in the geoJ object.
+  // Use conduits
+  for(let entry in allSymbols){
+    var rec = allSymbols[entry]
+    polyObj = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [rec.x, rec.y]
+      },
+      properties: {
+        name: entry,
+        text: rec.Gage
+      }
+    }
+    
+    geoJ.features.push(polyObj)
+  }
+  console.log(geoJ)
+
+  return geoJ
+}
+
 // Translate any list of node ids into geoJSON objects:
 function geoJSON_AllLabels(model){
   var allLabels = model.LABELS
